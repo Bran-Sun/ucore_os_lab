@@ -55,9 +55,19 @@ continue
 
 可以发现三者的汇编代码均相同
 
+### 4. 找一个bootloader或内核中的代码位置设置断点，并进行测试
 
+选在进入保护模式的位置设置断点，将gdbinit文件进行如下修改
 
+```
+file obj/bootblock.o
+set architecture i8086
+target remote :1234
+b protcseg
+continue
+```
 
+即可使程序在运行到该位置时暂停。
 
 
 
@@ -112,7 +122,7 @@ seta20.2:											# 等待input寄存器为空
 
 * 设置段寄存器，并建立堆栈，然后跳转到主方法
   ```assembly
-  movw $PROT_MODE_DSEG, %ax
+  		movw $PROT_MODE_DSEG, %ax
   	    movw %ax, %ds
   	    movw %ax, %es
   	    movw %ax, %fs
@@ -128,5 +138,68 @@ seta20.2:											# 等待input寄存器为空
 
 ## 练习4
 
-### 分析bootloader加载OS的过程
+### 1. bootloader是如何读取硬盘扇区的？
+
+在bootmain.c中，readsect函数用来读取硬盘扇区。
+
+* 首先，等待扇区不是忙状态
+* 0x1F2地址输入需要读取的扇区数目
+* 0x1F3～0x1F6输入的均为LBA的数值
+* 0x1F7输入读取的命令
+* 等待扇区准备好
+* 从扇区中读出512字节的内容
+
+### 2. bootloader是如何加载elf格式的文件的？
+
+* 先读取elf文件头
+
+* 验证文件头中的魔数(magic number)
+
+* 读取程序头部，即一个program header结构的数组，从中获得程序各个的信息，且读取到指定的地址处
+
+* 跳转执行该文件
+
+* 其中，如下语句
+
+  ```C
+  ((void (*)(void))(ELFHDR->e_entry & 0xFFFFFF))()
+  ```
+
+  表示将该地址强制转换成一个参数为空的函数，并执行该函数。
+
+## 练习5
+
+### 实现函数调用堆栈跟踪函数
+
+* 具体函数实现见kdebug.c文件。实现过程比较简单，按照提示获取ebp和eip，输出当前栈帧内容，然后再获得前一个栈帧的ebp和eip(用当前的ebp值作为地址)，进行递归即可。
+
+* 输出的最后一行为
+
+  ```
+  ebp:00007bf8 eip:00007d6e args:c031fcfa c08ed88e 64e4d08e fa7502a8 
+      <unknow>: -- 0x00007d6d --
+  ```
+
+  * 该eip指向的是bootblock.asm中的0x7d6e地址的语句。其中0x7d6c的语句为call语句，表示跳转到kern_init运行。
+  * ebp的初始值在0x7c45处被设置成0x7c00，然后跳转到bootmain运行
+  * 在bootmain中进行了一些压栈操作，所以后面的这些参数就是在bootmain函数中被压入的值
+
+## 练习6
+
+### 1. 中断描述符表的一个表项占多少字节？其中哪几位表示中断处理程序的入口？
+
+* 一个表项占8个字节
+* 其中0-1位和6-7位合起来表示地址，2-3位为段选择子。段选择子从GDT或者LDT中取得基址，相加后得到程序入口
+
+### 2. 完善trap.c中的idt_init函数
+
+* 先在外面声明__vectors，里面存储着每个中断处理代码的offset
+* 然后将idt中每一项用SETGATE来设置
+* 最后调用lidt()函数即可
+
+### 3. 完善trap.c中的trap函数
+
+* 设置一个静态变量进行累加，当等于100时清零并打印100 ticks。
+
+
 
