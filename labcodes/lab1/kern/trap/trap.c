@@ -171,8 +171,17 @@ trap_dispatch(struct trapframe *tf) {
         break;
     //LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.
     case T_SWITCH_TOU:
+    	if (tf->tf_cs != USER_CS) {
+    		tf->tf_cs = USER_CS;
+    		tf->tf_ss = USER_DS;
+    		tf->tf_esp = (uint32_t)tf + sizeof(struct trapframe);
+    		tf->tf_ds = USER_DS;
+    		tf->tf_fs = tf->tf_gs = USER_DS;
+    		tf->tf_eflags |= FL_IOPL_MASK;
+    	}
+    	break;
     case T_SWITCH_TOK:
-        panic("T_SWITCH_** ??\n");
+
         break;
     case IRQ_OFFSET + IRQ_IDE1:
     case IRQ_OFFSET + IRQ_IDE2:
