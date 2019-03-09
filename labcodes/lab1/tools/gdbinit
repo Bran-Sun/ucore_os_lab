@@ -1,5 +1,5 @@
 file bin/kernel
 set architecture i8086
 target remote :1234
-b kern_init
+b lab1_switch_to_kernel
 continue

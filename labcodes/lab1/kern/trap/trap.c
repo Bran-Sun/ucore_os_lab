@@ -51,7 +51,7 @@ idt_init(void) {
 	for (int i = 0; i < 256; i++) {
 		SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL); //GD_KTEXT can select kernel code base address, DPL_KERNEL means can only be run in KERNEL_MODE
 	}
-	cprintf("%d\n", __vectors[0]);
+	SETGATE(idt[T_SWITCH_TOK], 1, GD_KTEXT, __vectors[T_SWITCH_TOK], DPL_USER);
 	lidt(&idt_pd);
 }
 
@@ -176,12 +176,18 @@ trap_dispatch(struct trapframe *tf) {
     		tf->tf_ss = USER_DS;
     		tf->tf_esp = (uint32_t)tf + sizeof(struct trapframe);
     		tf->tf_ds = USER_DS;
-    		tf->tf_fs = tf->tf_gs = USER_DS;
+    		tf->tf_fs = tf->tf_gs = tf->tf_es = USER_DS;
     		tf->tf_eflags |= FL_IOPL_MASK;
     	}
     	break;
     case T_SWITCH_TOK:
-
+    	if (tf->tf_cs != KERNEL_CS) {
+    		print_trapStackframe(tf);
+    		tf->tf_cs = KERNEL_CS;
+    		tf->tf_ss = KERNEL_DS;
+    		tf->tf_ds = tf->tf_es = tf->tf_fs = tf->tf_gs = KERNEL_DS;
+    		tf->tf_eflags &= (~FL_IOPL_MASK);
+    	}
         break;
     case IRQ_OFFSET + IRQ_IDE1:
     case IRQ_OFFSET + IRQ_IDE2:

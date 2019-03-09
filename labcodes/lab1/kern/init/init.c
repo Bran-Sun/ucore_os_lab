@@ -85,7 +85,7 @@ static void
 lab1_switch_to_user(void) {
     //LAB1 CHALLENGE 1 : TODO
 	asm volatile (
-			"sub %%esp, $8;"
+			"subl $0x8, %%esp;"
 			"int %0;"
 			"movl %%ebp, %%esp;"
 			:
@@ -98,6 +98,7 @@ lab1_switch_to_kernel(void) {
     //LAB1 CHALLENGE 1 :  TODO
 	asm volatile(
 			"int %0;"
+			"movl %%ebp, %%esp;"
 			:
 			:"i"(T_SWITCH_TOK)
 			 );
@@ -110,7 +111,7 @@ lab1_switch_test(void) {
     lab1_switch_to_user();
     lab1_print_cur_status();
     cprintf("+++ switch to kernel mode +++\n");
-    //lab1_switch_to_kernel();
-    //lab1_print_cur_status();
+    lab1_switch_to_kernel();
+    lab1_print_cur_status();
 }
 
